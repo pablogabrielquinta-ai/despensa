@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#14181A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Despensa · Stock del hogar</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#14181A; --panel:#1F2528; --panel2:#262E32;
+    --ink:#F2EEE3; --muted:#8A9499; --line:#313A3F;
+    --amber:#FFC53D; --amber-ink:#2A2000;
+    --green:#4CAF7D; --red:#E5484D;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--ink);
+    display:flex; flex-direction:column; overflow:hidden;
+    -webkit-user-select:none; user-select:none;
+  }
+  input,textarea{-webkit-user-select:text;user-select:text}
+
+  /* ---------- Header ---------- */
+  header{
+    padding:14px 16px 10px; display:flex; align-items:center; gap:10px;
+    border-bottom:1px solid var(--line); flex-shrink:0;
+  }
+  header .logo{
+    width:34px;height:34px;border-radius:9px;background:var(--amber);
+    display:flex;align-items:center;justify-content:center;font-size:19px;
+  }
+  header h1{font-size:17px;font-weight:800;letter-spacing:-.02em}
+  header .sub{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+  header .spacer{flex:1}
+  .badge-falta{
+    background:var(--red);color:#fff;font-size:12px;font-weight:800;
+    min-width:24px;height:24px;border-radius:12px;padding:0 8px;
+    display:none;align-items:center;justify-content:center;
+  }
+  .btn-icon{
+    background:var(--panel);border:1px solid var(--line);color:var(--ink);
+    width:34px;height:34px;border-radius:9px;font-size:16px;
+    display:flex;align-items:center;justify-content:center;
+  }
+
+  /* ---------- Main / tabs ---------- */
+  main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
+  .view{display:none;padding:14px 14px 20px}
+  .view.active{display:block}
+
+  nav{
+    display:flex;border-top:1px solid var(--line);background:var(--panel);
+    flex-shrink:0;padding-bottom:env(safe-area-inset-bottom);
+  }
+  nav button{
+    flex:1;background:none;border:none;color:var(--muted);
+    padding:9px 0 10px;font-size:11px;font-weight:700;letter-spacing:.04em;
+    display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;
+  }
+  nav button .ico{font-size:21px;line-height:1}
+  nav button.active{color:var(--amber)}
+  nav button .dot{
+    position:absolute;top:6px;right:calc(50% - 22px);
+    width:9px;height:9px;border-radius:50%;background:var(--red);display:none;
+  }
+
+  /* ---------- Escanear ---------- */
+  .cam-frame{
+    position:relative;border-radius:16px;overflow:hidden;background:#000;
+    aspect-ratio:3/4;max-height:52vh;margin:0 auto;
+    border:1px solid var(--line);
+  }
+  .cam-frame video{width:100%;height:100%;object-fit:cover;display:block}
+  .cam-off{
+    position:absolute;inset:0;display:flex;flex-direction:column;gap:12px;
+    align-items:center;justify-content:center;color:var(--muted);
+    background:radial-gradient(circle at 50% 30%, #1c2326, #0d1113);
+    padding:20px;text-align:center;font-size:14px;
+  }
+  .cam-off .big{font-size:44px}
+  /* viewfinder corners + scan line */
+  .reticle{position:absolute;inset:0;pointer-events:none;display:none}
+  .cam-frame.on .reticle{display:block}
+  .cam-frame.on .cam-off{display:none}
+  .reticle .box{
+    position:absolute;left:9%;right:9%;top:26%;height:34%;
+  }
+  .reticle .c{position:absolute;width:26px;height:26px;border:3px solid var(--amber)}
+  .reticle .c.tl{top:0;left:0;border-right:none;border-bottom:none;border-radius:8px 0 0 0}
+  .reticle .c.tr{top:0;right:0;border-left:none;border-bottom:none;border-radius:0 8px 0 0}
+  .reticle .c.bl{bottom:0;left:0;border-right:none;border-top:none;border-radius:0 0 0 8px}
+  .reticle .c.br{bottom:0;right:0;border-left:none;border-top:none;border-radius:0 0 8px 0}
+  .reticle .line{
+    position:absolute;left:6%;right:6%;height:2px;background:var(--amber);
+    box-shadow:0 0 12px 2px rgba(255,197,61,.55);
+    animation:sweep 2.2s ease-in-out infinite;
+  }
+  @keyframes sweep{0%,100%{top:8%}50%{top:88%}}
+  @media (prefers-reduced-motion:reduce){.reticle .line{animation:none;top:50%}}
+
+  .scan-actions{display:flex;gap:10px;margin-top:12px}
+  .btn{
+    flex:1;border:none;border-radius:13px;padding:14px 10px;
+    font-size:15px;font-weight:800;letter-spacing:.01em;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn-amber{background:var(--amber);color:var(--amber-ink)}
+  .btn-dark{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+  .btn-red{background:var(--red);color:#fff}
+  .btn-green{background:var(--green);color:#06130c}
+
+  .alt-row{display:flex;gap:10px;margin-top:10px}
+  .alt-row .btn{font-size:13px;padding:12px 8px;font-weight:700}
+
+  .manual-box{margin-top:12px;display:none;gap:8px}
+  .manual-box.open{display:flex}
+  .manual-box input{
+    flex:1;background:var(--panel);border:1px solid var(--line);color:var(--ink);
+    border-radius:12px;padding:13px;font-size:16px;
+  }
+  .hint{margin-top:12px;color:var(--muted);font-size:12.5px;line-height:1.5;text-align:center}
+
+  /* ---------- Listas ---------- */
+  .search{
+    width:100%;background:var(--panel);border:1px solid var(--line);color:var(--ink);
+    border-radius:12px;padding:12px 14px;font-size:15px;margin-bottom:12px;
+  }
+  .cat-title{
+    font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);margin:16px 2px 8px;
+  }
+  .cat-title:first-of-type{margin-top:2px}
+  .prod{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:11px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;
+  }
+  .prod.low{border-color:rgba(229,72,77,.55)}
+  .prod .info{flex:1;min-width:0}
+  .prod .name{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prod .meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .prod .meta .low-tag{color:var(--red);font-weight:800}
+  .stepper{display:flex;align-items:center;gap:2px}
+  .stepper button{
+    width:40px;height:40px;border-radius:11px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--ink);font-size:20px;font-weight:800;
+  }
+  .stepper button:active{background:var(--amber);color:var(--amber-ink)}
+  .stepper .num{
+    min-width:40px;text-align:center;font-size:19px;font-weight:800;
+    font-variant-numeric:tabular-nums;
+  }
+  .stepper .num.zero{color:var(--red)}
+  .empty{
+    text-align:center;color:var(--muted);padding:44px 24px;font-size:14px;line-height:1.6;
+  }
+  .empty .big{font-size:42px;display:block;margin-bottom:10px}
+
+  /* ---------- Bottom sheet ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;z-index:40;
+  }
+  .overlay.open{display:block}
+  .sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:50;
+    background:var(--panel);border-radius:20px 20px 0 0;border-top:1px solid var(--line);
+    padding:10px 16px calc(18px + env(safe-area-inset-bottom));
+    transform:translateY(105%);transition:transform .22s ease;max-height:88vh;overflow-y:auto;
+  }
+  .sheet.open{transform:translateY(0)}
+  .grip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:2px auto 14px}
+  .sheet h2{font-size:17px;font-weight:800;margin-bottom:2px}
+  .sheet .code-line{font-size:12px;color:var(--muted);margin-bottom:14px;font-variant-numeric:tabular-nums}
+
+  /* price-tag stock display */
+  .tag-stock{
+    display:flex;align-items:center;justify-content:center;gap:14px;
+    background:var(--amber);color:var(--amber-ink);border-radius:14px;
+    padding:10px;margin:6px 0 14px;
+    position:relative;
+  }
+  .tag-stock .n{font-size:44px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1}
+  .tag-stock .lbl{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.75}
+  .tag-stock button{
+    width:56px;height:56px;border-radius:14px;border:none;
+    background:var(--amber-ink);color:var(--amber);font-size:28px;font-weight:800;
+  }
+  .tag-stock button:active{transform:scale(.94)}
+  .tag-stock.danger{background:var(--red);color:#fff}
+  .tag-stock.danger button{background:rgba(0,0,0,.35);color:#fff}
+
+  .sheet-row{display:flex;gap:10px;margin-top:10px}
+  .sheet .link-row{display:flex;justify-content:space-between;margin-top:14px}
+  .sheet .link{background:none;border:none;color:var(--muted);font-size:13px;font-weight:700;padding:6px}
+  .sheet .link.danger{color:var(--red)}
+
+  /* form */
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .field input{
+    width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+    border-radius:12px;padding:13px;font-size:16px;
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+    border-radius:20px;padding:9px 13px;font-size:13.5px;font-weight:700;
+  }
+  .chip.sel{background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
+  .duo{display:flex;gap:10px}
+  .duo .field{flex:1}
+
+  /* toast */
+  .toast{
+    position:fixed;left:50%;bottom:86px;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#14181A;font-size:14px;font-weight:700;
+    padding:10px 18px;border-radius:22px;opacity:0;transition:.25s;z-index:60;
+    pointer-events:none;white-space:nowrap;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .wa-btn{margin:4px 0 14px}
+  .backup-note{font-size:12px;color:var(--muted);line-height:1.55;margin-top:8px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🛒</div>
+  <div>
+    <h1>Despensa</h1>
+    <div class="sub">Stock del hogar</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="badge-falta" id="badgeFalta">0</div>
+  <button class="btn-icon" id="btnBackup" title="Copia de seguridad">⚙️</button>
+</header>
+
+<main>
+  <!-- ============ ESCANEAR ============ -->
+  <section class="view active" id="view-scan">
+    <div class="cam-frame" id="camFrame">
+      <video id="video" playsinline muted></video>
+      <div class="cam-off" id="camOff">
+        <span class="big">📷</span>
+        <span id="camOffMsg">Tocá <b>▶ Escanear con cámara</b> y apuntá al código de barras. Lee solo, sin sacar foto. ✨</span>
+      </div>
+      <div class="reticle">
+        <div class="box">
+          <div class="c tl"></div><div class="c tr"></div>
+          <div class="c bl"></div><div class="c br"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scan-actions">
+      <button class="btn btn-amber" id="btnCam" style="padding:16px 10px;font-size:16px">▶ Escanear con cámara</button>
+    </div>
+    <div class="alt-row">
+      <button class="btn btn-dark" id="btnPhoto">📸 Foto al código</button>
+      <button class="btn btn-dark" id="btnManual">⌨️ Código a mano</button>
+    </div>
+    <div class="alt-row">
+      <button class="btn btn-dark" id="btnNoCode">🏷️ Producto sin código (verdura, pan...)</button>
+    </div>
+    <input type="file" accept="image/*" id="photoInput" style="display:none">
+
+    <div class="manual-box" id="manualBox">
+      <input type="text" inputmode="numeric" id="manualInput" placeholder="Número del código de barras">
+      <button class="btn btn-amber" style="flex:0 0 auto;padding:13px 18px" id="btnManualOk">OK</button>
+    </div>
+
+    <p class="hint" id="scanHint">La primera vez que escaneás un producto te pide el nombre. Después lo reconoce solo. ✨</p>
+  </section>
+
+  <!-- ============ STOCK ============ -->
+  <section class="view" id="view-stock">
+    <input class="search" id="searchInput" type="text" placeholder="Buscar producto…">
+    <div id="stockList"></div>
+  </section>
+
+  <!-- ============ FALTANTES ============ -->
+  <section class="view" id="view-falta">
+    <button class="btn btn-green wa-btn" id="btnWA" style="width:100%">🟢 Mandar faltantes por WhatsApp</button>
+    <div id="faltaList"></div>
+  </section>
+</main>
+
+<nav>
+  <button class="active" data-view="scan"><span class="ico">📷</span>Escanear</button>
+  <button data-view="stock"><span class="ico">📦</span>Stock</button>
+  <button data-view="falta"><span class="ico">🛒</span>Faltantes<span class="dot" id="navDot"></span></button>
+</nav>
+
+<!-- ============ SHEET: producto conocido ============ -->
+<div class="overlay" id="overlay"></div>
+
+<div class="sheet" id="sheetProd">
+  <div class="grip"></div>
+  <h2 id="pName">Producto</h2>
+  <div class="code-line" id="pCode"></div>
+  <div class="tag-stock" id="pTag">
+    <button id="pMinus">−</button>
+    <div style="text-align:center">
+      <div class="n" id="pStock">0</div>
+      <div class="lbl">en casa</div>
+    </div>
+    <button id="pPlus">＋</button>
+  </div>
+  <div class="sheet-row">
+    <button class="btn btn-amber" id="pDone">✔ Listo</button>
+  </div>
+  <div class="link-row">
+    <button class="link" id="pEdit">✏️ Editar</button>
+    <button class="link danger" id="pDelete">🗑 Eliminar</button>
+  </div>
+</div>
+
+<!-- ============ SHEET: alta / edición ============ -->
+<div class="sheet" id="sheetForm">
+  <div class="grip"></div>
+  <h2 id="fTitle">Producto nuevo</h2>
+  <div class="code-line" id="fCode"></div>
+  <div class="field">
+    <label>Nombre</label>
+    <input type="text" id="fName" placeholder="Ej: Yerba Playadito 1kg">
+  </div>
+  <div class="field">
+    <label>Categoría</label>
+    <div class="chips" id="fChips"></div>
+  </div>
+  <div class="duo">
+    <div class="field">
+      <label>Cantidad en casa</label>
+      <input type="number" inputmode="numeric" id="fStock" value="1" min="0">
+    </div>
+    <div class="field">
+      <label>Avisar si queda ≤</label>
+      <input type="number" inputmode="numeric" id="fMin" value="1" min="0">
+    </div>
+  </div>
+  <div class="sheet-row">
+    <button class="btn btn-dark" id="fCancel" style="flex:0 0 38%">Cancelar</button>
+    <button class="btn btn-amber" id="fSave">Guardar</button>
+  </div>
+</div>
+
+<!-- ============ SHEET: backup ============ -->
+<div class="sheet" id="sheetBackup">
+  <div class="grip"></div>
+  <h2>Copia de seguridad</h2>
+  <div class="code-line" id="bkCount"></div>
+  <div class="sheet-row">
+    <button class="btn btn-dark" id="btnExport">⬇️ Guardar copia</button>
+    <button class="btn btn-dark" id="btnImport">⬆️ Restaurar copia</button>
+  </div>
+  <input type="file" accept=".json,application/json" id="importInput" style="display:none">
+  <p class="backup-note">Los datos viven en este celular (localStorage). La copia baja un archivo <b>.json</b> que podés pasar por WhatsApp a otro celu y restaurarla ahí.</p>
+  <div class="sheet-row">
+    <button class="btn btn-amber" id="bkClose">Cerrar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+  var LS_KEY = 'despensa_v1';
+  var CATS = [
+    {id:'almacen',  n:'🥫 Almacén'},
+    {id:'frescos',  n:'🧀 Frescos'},
+    {id:'bebidas',  n:'🥤 Bebidas'},
+    {id:'limpieza', n:'🧼 Limpieza'},
+    {id:'higiene',  n:'🪥 Higiene'},
+    {id:'otros',    n:'📦 Otros'}
+  ];
+  var CAT_NAME = {};
+  CATS.forEach(function(c){ CAT_NAME[c.id] = c.n; });
+
+  var products = load();            // { code: {n:nombre, c:cat, s:stock, m:min} }
+  var currentCode = null;           // código abierto en sheets
+  var editing = false;
+  var lastScan = { code:null, t:0 };
+  var stream = null, detector = null, scanTimer = null;
+
+  function $(id){ return document.getElementById(id); }
+  function load(){
+    try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; }
+    catch(e){ return {}; }
+  }
+  function save(){
+    localStorage.setItem(LS_KEY, JSON.stringify(products));
+    refreshBadges();
+  }
+  function toast(msg){
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._to);
+    t._to = setTimeout(function(){ t.classList.remove('show'); }, 1800);
+  }
+  function vibrate(ms){ if (navigator.vibrate) navigator.vibrate(ms); }
+  function beep(){
+    try {
+      var ctx = beep.ctx || (beep.ctx = new (window.AudioContext||window.webkitAudioContext)());
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = 1200; o.type = 'square';
+      g.gain.setValueAtTime(.12, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .12);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + .13);
+    } catch(e){}
+  }
+  function norm(s){
+    return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  }
+  function lowList(){
+    return Object.keys(products).filter(function(k){
+      return products[k].s <= products[k].m;
+    });
+  }
+  function refreshBadges(){
+    var n = lowList().length;
+    var b = $('badgeFalta');
+    b.style.display = n ? 'flex' : 'none';
+    b.textContent = n;
+    $('navDot').style.display = n ? 'block' : 'none';
+  }
+
+  /* ================= TABS ================= */
+  var navBtns = document.querySelectorAll('nav button');
+  navBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      navBtns.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+      $('view-' + btn.dataset.view).classList.add('active');
+      if (btn.dataset.view === 'stock') renderStock();
+      if (btn.dataset.view === 'falta') renderFalta();
+      if (btn.dataset.view !== 'scan') stopCam();
+    });
+  });
+
+  /* ================= CÁMARA + DETECCIÓN ================= */
+  var hasDetector = ('BarcodeDetector' in window);
+  var FORMATS = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code'];
+
+  function getDetector(){
+    if (detector) return Promise.resolve(detector);
+    if (!hasDetector) return Promise.reject(new Error('no detector'));
+    return window.BarcodeDetector.getSupportedFormats().then(function(sup){
+      var fmts = FORMATS.filter(function(f){ return sup.indexOf(f) !== -1; });
+      detector = new window.BarcodeDetector({ formats: fmts.length ? fmts : undefined });
+      return detector;
+    });
+  }
+
+  $('btnCam').addEventListener('click', function(){
+    if (stream) { stopCam(); return; }
+    startCam();
+  });
+
+  function startCam(){
+    if (!hasDetector){
+      $('camOffMsg').innerHTML = 'Este navegador no tiene lector integrado. 😕<br>Usá <b>Foto al código</b> o <b>Código a mano</b>. En Android conviene abrir la app con <b>Chrome</b>.';
+      toast('Sin lector en este navegador');
+      return;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      $('camOffMsg').innerHTML = 'No puedo acceder a la cámara acá. Probá con <b>Foto al código</b> 👇';
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width:{ideal:1280}, height:{ideal:720} },
+      audio: false
+    }).then(function(s){
+      stream = s;
+      var v = $('video');
+      v.srcObject = s;
+      return v.play();
+    }).then(function(){
+      $('camFrame').classList.add('on');
+      $('btnCam').textContent = '⏹ Detener escáner';
+      return getDetector();
+    }).then(function(){
+      scanTimer = setInterval(scanFrame, 280);
+    }).catch(function(err){
+      stopCam();
+      $('camOffMsg').innerHTML = 'No se pudo abrir la cámara (' + (err.name || 'error') + ').<br>Fijate el permiso de cámara, o usá <b>Foto al código</b> 👇';
+      toast('No se pudo abrir la cámara');
+    });
+  }
+
+  function stopCam(){
+    if (scanTimer){ clearInterval(scanTimer); scanTimer = null; }
+    if (stream){
+      stream.getTracks().forEach(function(t){ t.stop(); });
+      stream = null;
+    }
+    $('video').srcObject = null;
+    $('camFrame').classList.remove('on');
+    $('btnCam').textContent = '▶ Escanear con cámara';
+  }
+
+  function scanFrame(){
+    var v = $('video');
+    if (!detector || !v.videoWidth) return;
+    if ($('overlay').classList.contains('open')) return; // pausa mientras hay un panel abierto
+    detector.detect(v).then(function(codes){
+      if (codes && codes.length) handleCode(codes[0].rawValue);
+    }).catch(function(){});
+  }
+
+  function handleCode(raw){
+    var code = String(raw || '').trim();
+    if (!code) return;
+    var now = Date.now();
+    if (code === lastScan.code && now - lastScan.t < 2500) return; // anti doble lectura
+    lastScan = { code: code, t: now };
+    vibrate(60); beep();
+    openForCode(code);
+  }
+
+  /* --- Foto al código (fallback) --- */
+  $('btnPhoto').addEventListener('click', function(){
+    if (!hasDetector){
+      toast('Este navegador no puede leer códigos 😕');
+      $('btnManual').click();
+      return;
+    }
+    $('photoInput').click();
+  });
+  $('photoInput').addEventListener('change', function(){
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    getDetector().then(function(det){
+      return createImageBitmap(f).then(function(bmp){
+        return det.detect(bmp);
+      });
+    }).then(function(codes){
+      if (codes && codes.length) handleCode(codes[0].rawValue);
+      else toast('No encontré ningún código en la foto 🔍');
+    }).catch(function(){
+      toast('No pude leer la foto');
+    });
+  });
+
+  /* --- Manual --- */
+  $('btnManual').addEventListener('click', function(){
+    var box = $('manualBox');
+    box.classList.toggle('open');
+    if (box.classList.contains('open')) $('manualInput').focus();
+  });
+  $('btnManualOk').addEventListener('click', manualGo);
+  $('manualInput').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') manualGo();
+  });
+  function manualGo(){
+    var c = $('manualInput').value.trim();
+    if (!c) return;
+    $('manualInput').value = '';
+    $('manualBox').classList.remove('open');
+    openForCode(c);
+  }
+
+  /* --- Sin código --- */
+  $('btnNoCode').addEventListener('click', function(){
+    openForm('SC-' + Date.now(), false);
+  });
+
+  /* ================= SHEETS ================= */
+  function openOverlay(){ $('overlay').classList.add('open'); }
+  function closeSheets(){
+    $('overlay').classList.remove('open');
+    $('sheetProd').classList.remove('open');
+    $('sheetForm').classList.remove('open');
+    $('sheetBackup').classList.remove('open');
+  }
+  $('overlay').addEventListener('click', closeSheets);
+
+  function openForCode(code){
+    if (products[code]) openProd(code);
+    else openForm(code, false);
+  }
+
+  /* --- Producto conocido --- */
+  function openProd(code){
+    currentCode = code;
+    var p = products[code];
+    $('pName').textContent = p.n;
+    $('pCode').textContent = (CAT_NAME[p.c] || '') + '  ·  ' + (code.indexOf('SC-') === 0 ? 'sin código de barras' : code);
+    paintStock();
+    closeSheets();
+    openOverlay();
+    $('sheetProd').classList.add('open');
+  }
+  function paintStock(){
+    var p = products[currentCode];
+    $('pStock').textContent = p.s;
+    var tag = $('pTag');
+    if (p.s <= p.m) tag.classList.add('danger'); else tag.classList.remove('danger');
+  }
+  $('pPlus').addEventListener('click', function(){
+    products[currentCode].s++;
+    vibrate(20); save(); paintStock();
+  });
+  $('pMinus').addEventListener('click', function(){
+    var p = products[currentCode];
+    if (p.s > 0) p.s--;
+    vibrate(20); save(); paintStock();
+    if (p.s === p.m) toast('⚠️ Queda poco: anotado en Faltantes');
+  });
+  $('pDone').addEventListener('click', function(){
+    closeSheets();
+    renderStock(); renderFalta();
+  });
+  $('pEdit').addEventListener('click', function(){ openForm(currentCode, true); });
+  $('pDelete').addEventListener('click', function(){
+    var p = products[currentCode];
+    if (confirm('¿Eliminar "' + p.n + '" de la despensa?')){
+      delete products[currentCode];
+      save(); closeSheets(); renderStock(); renderFalta();
+      toast('Producto eliminado');
+    }
+  });
+
+  /* --- Alta / edición --- */
+  var selCat = 'almacen';
+  var chipsBox = $('fChips');
+  CATS.forEach(function(c){
+    var b = document.createElement('button');
+    b.className = 'chip'; b.textContent = c.n; b.dataset.cat = c.id;
+    b.addEventListener('click', function(){
+      selCat = c.id;
+      chipsBox.querySelectorAll('.chip').forEach(function(x){ x.classList.remove('sel'); });
+      b.classList.add('sel');
+    });
+    chipsBox.appendChild(b);
+  });
+
+  function openForm(code, isEdit){
+    currentCode = code;
+    editing = isEdit;
+    var p = products[code];
+    $('fTitle').textContent = isEdit ? 'Editar producto' : '¡Producto nuevo! 🎉';
+    $('fCode').textContent = code.indexOf('SC-') === 0 ? 'Sin código de barras' : 'Código: ' + code;
+    $('fName').value  = p ? p.n : '';
+    $('fStock').value = p ? p.s : 1;
+    $('fMin').value   = p ? p.m : 1;
+    selCat = p ? p.c : 'almacen';
+    chipsBox.querySelectorAll('.chip').forEach(function(x){
+      x.classList.toggle('sel', x.dataset.cat === selCat);
+    });
+    closeSheets();
+    openOverlay();
+    $('sheetForm').classList.add('open');
+    if (!isEdit) setTimeout(function(){ $('fName').focus(); }, 250);
+  }
+  $('fCancel').addEventListener('click', closeSheets);
+  $('fSave').addEventListener('click', function(){
+    var name = $('fName').value.trim();
+    if (!name){ toast('Le falta el nombre 😉'); $('fName').focus(); return; }
+    var s = parseInt($('fStock').value, 10); if (isNaN(s) || s < 0) s = 0;
+    var m = parseInt($('fMin').value, 10);   if (isNaN(m) || m < 0) m = 0;
+    products[currentCode] = { n:name, c:selCat, s:s, m:m };
+    save();
+    closeSheets();
+    renderStock(); renderFalta();
+    toast(editing ? 'Guardado ✔' : '¡"' + name + '" agregado! ✔');
+  });
+
+  /* ================= STOCK ================= */
+  $('searchInput').addEventListener('input', renderStock);
+
+  function stepperHTML(code, p){
+    return '<div class="stepper">' +
+      '<button data-a="minus" data-c="' + code + '">−</button>' +
+      '<span class="num' + (p.s === 0 ? ' zero' : '') + '">' + p.s + '</span>' +
+      '<button data-a="plus" data-c="' + code + '">＋</button>' +
+      '</div>';
+  }
+  function prodRow(code, p){
+    var low = p.s <= p.m;
+    return '<div class="prod' + (low ? ' low' : '') + '" data-open="' + code + '">' +
+      '<div class="info">' +
+        '<div class="name">' + esc(p.n) + '</div>' +
+        '<div class="meta">' + (low ? '<span class="low-tag">⚠ queda poco</span>' : 'aviso si queda ≤ ' + p.m) + '</div>' +
+      '</div>' + stepperHTML(code, p) + '</div>';
+  }
+  function esc(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderStock(){
+    var q = norm($('searchInput').value);
+    var keys = Object.keys(products).filter(function(k){
+      return !q || norm(products[k].n).indexOf(q) !== -1;
+    });
+    var box = $('stockList');
+    if (!keys.length){
+      box.innerHTML = '<div class="empty"><span class="big">🧺</span>' +
+        (Object.keys(products).length ? 'No hay productos con ese nombre.' :
+        'Todavía no hay productos.<br>Andá a <b>Escanear</b> y arrancá con lo que tengas en la alacena 💪') + '</div>';
+      return;
+    }
+    var html = '';
+    CATS.forEach(function(c){
+      var ks = keys.filter(function(k){ return products[k].c === c.id; });
+      if (!ks.length) return;
+      ks.sort(function(a,b){ return products[a].n.localeCompare(products[b].n); });
+      html += '<div class="cat-title">' + c.n + '</div>';
+      ks.forEach(function(k){ html += prodRow(k, products[k]); });
+    });
+    box.innerHTML = html;
+  }
+
+  /* ================= FALTANTES ================= */
+  function renderFalta(){
+    var keys = lowList();
+    var box = $('faltaList');
+    if (!keys.length){
+      box.innerHTML = '<div class="empty"><span class="big">🎉</span>¡No falta nada! La despensa está al día.</div>';
+      $('btnWA').style.display = 'none';
+      return;
+    }
+    $('btnWA').style.display = 'flex';
+    keys.sort(function(a,b){ return products[a].n.localeCompare(products[b].n); });
+    var html = '';
+    keys.forEach(function(k){ html += prodRow(k, products[k]); });
+    box.innerHTML = html;
+  }
+
+  $('btnWA').addEventListener('click', function(){
+    var keys = lowList();
+    if (!keys.length) return;
+    var lines = ['🛒 *Faltantes en casa:*', ''];
+    keys.sort(function(a,b){ return products[a].n.localeCompare(products[b].n); });
+    keys.forEach(function(k){
+      var p = products[k];
+      lines.push('▫️ ' + p.n + (p.s > 0 ? ' (queda ' + p.s + ')' : ' (no queda)'));
+    });
+    lines.push('');
+    lines.push('_Despensa 🏠_');
+    window.open('https://wa.me/?text=' + encodeURIComponent(lines.join('\n')), '_blank');
+  });
+
+  /* --- steppers y apertura desde listas (delegación) --- */
+  function listHandler(e){
+    var btn = e.target.closest('button[data-a]');
+    if (btn){
+      e.stopPropagation();
+      var code = btn.dataset.c, p = products[code];
+      if (!p) return;
+      if (btn.dataset.a === 'plus') p.s++;
+      else if (p.s > 0) p.s--;
+      vibrate(15); save();
+      renderStock(); renderFalta();
+      return;
+    }
+    var row = e.target.closest('.prod[data-open]');
+    if (row) openProd(row.dataset.open);
+  }
+  $('stockList').addEventListener('click', listHandler);
+  $('faltaList').addEventListener('click', listHandler);
+
+  /* ================= BACKUP ================= */
+  $('btnBackup').addEventListener('click', function(){
+    $('bkCount').textContent = Object.keys(products).length + ' productos guardados en este celu';
+    closeSheets(); openOverlay();
+    $('sheetBackup').classList.add('open');
+  });
+  $('bkClose').addEventListener('click', closeSheets);
+
+  $('btnExport').addEventListener('click', function(){
+    var d = new Date();
+    var name = 'despensa_' + d.getFullYear() + '-' +
+      ('0' + (d.getMonth()+1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) + '.json';
+    var blob = new Blob([JSON.stringify(products, null, 1)], { type:'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+    toast('Copia guardada ⬇️');
+  });
+
+  $('btnImport').addEventListener('click', function(){ $('importInput').click(); });
+  $('importInput').addEventListener('change', function(){
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function(){
+      try {
+        var data = JSON.parse(r.result);
+        if (typeof data !== 'object' || data === null) throw new Error('formato');
+        var n = Object.keys(data).length;
+        if (!confirm('La copia tiene ' + n + ' productos. ¿Reemplazar lo que hay en este celu?')) return;
+        products = data;
+        save(); renderStock(); renderFalta(); closeSheets();
+        toast('Copia restaurada ✔ (' + n + ' productos)');
+      } catch(e){
+        toast('Ese archivo no es una copia válida 😕');
+      }
+    };
+    r.readAsText(f);
+  });
+
+  /* ================= INIT ================= */
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  }
+  refreshBadges();
+  renderStock();
+  renderFalta();
+  document.addEventListener('visibilitychange', function(){
+    if (document.hidden) stopCam();
+  });
+})();
+</script>
+</body>
+</html>
