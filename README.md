@@ -1,2 +1,2 @@
-App de stock del hogar# despensa
+App de stock del hogar# Despensa
 Herramienta varias 
