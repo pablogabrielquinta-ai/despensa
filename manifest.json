@@ -1,16 +1,17 @@
 {
-  "name": "DPEC Foto Medidor",
-  "short_name": "Foto Medidor",
-  "description": "Fotos de medidores con sello de remesa, ruta y novedad",
-  "start_url": "./dpec_foto_medidor.html",
-  "scope": "./",
+  "id": "https://pablogabrielquinta-ai.github.io/despensa/",
+  "name": "Despensa - Stock del hogar",
+  "short_name": "Despensa",
+  "description": "Escaner de codigos de barras para el stock de casa",
+  "start_url": "https://pablogabrielquinta-ai.github.io/despensa/",
+  "scope": "https://pablogabrielquinta-ai.github.io/despensa/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#14181D",
-  "theme_color": "#14181D",
-  "lang": "es-AR",
+  "background_color": "#14181A",
+  "theme_color": "#14181A",
   "icons": [
-    { "src": "icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    { "src": "https://pablogabrielquinta-ai.github.io/despensa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "https://pablogabrielquinta-ai.github.io/despensa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "https://pablogabrielquinta-ai.github.io/despensa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
